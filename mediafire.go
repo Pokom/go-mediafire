@@ -11,11 +11,10 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"strings"
 )
 
-var matchDownloadURL, _ = regexp.Compile("href=\"((http|https)://download[^\"]+)")
-var matchFilename, _ = regexp.Compile("filename=\"(.*)\"")
+var matchDownloadURL = regexp.MustCompile("href=\"((http|https)://download[^\"]+)")
+var matchFilename  = regexp.MustCompile(`filename=\"(.*)\"`)
 
 func findMatch(r io.Reader, matcher *regexp.Regexp) (string, error){
 	scanner := bufio.NewScanner(r)
@@ -27,6 +26,11 @@ func findMatch(r io.Reader, matcher *regexp.Regexp) (string, error){
 		}
 	}
 	return "", fmt.Errorf("download link not Found")
+}
+
+func findFileName(content string) string {
+	matches := matchFilename.FindStringSubmatch(content)
+	return matches[1]
 }
 
 func Download(url, outputDir string) error {
@@ -60,8 +64,8 @@ func Download(url, outputDir string) error {
 	}
 	defer resp.Body.Close()
 
-	fileName, err := findMatch(strings.NewReader(resp.Header.Get("Content-Disposition")), matchFilename)
-	if err != nil {
+	fileName := findFileName(resp.Header.Get("Content-Disposition"))
+	if fileName == "" {
 		return fmt.Errorf("could not find filename: %s", err.Error())
 	}
 
