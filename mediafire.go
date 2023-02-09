@@ -14,9 +14,9 @@ import (
 )
 
 var matchDownloadURL = regexp.MustCompile("href=\"((http|https)://download[^\"]+)")
-var matchFilename  = regexp.MustCompile(`filename=\"(.*)\"`)
+var matchFilename = regexp.MustCompile(`filename=\"(.*)\"`)
 
-func findMatch(r io.Reader, matcher *regexp.Regexp) (string, error){
+func findMatch(r io.Reader, matcher *regexp.Regexp) (string, error) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -33,11 +33,11 @@ func findFileName(content string) string {
 	return matches[1]
 }
 
-func Download(url, outputDir string) error {
+func Download(url, outputDir string) (string, error) {
 	// Open up connection to url
 	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -50,38 +50,33 @@ func Download(url, outputDir string) error {
 		// If contentDisposition is empty, update url by calling extrctDownloadLink
 		downloadURL, err = findMatch(resp.Body, matchDownloadURL)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
 	if downloadURL == "" {
-		return fmt.Errorf("%s appears to be password protected", url)
+		return "", fmt.Errorf("%s appears to be password protected", url)
 	}
 
 	resp, err = http.Get(downloadURL)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	fileName := findFileName(resp.Header.Get("Content-Disposition"))
 	if fileName == "" {
-		return fmt.Errorf("could not find filename: %s", err.Error())
+		return "", fmt.Errorf("could not find filename: %s", err.Error())
 	}
 
 	file, err := os.Create(path.Join(outputDir, fileName))
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return fileName, nil
 }
-
-
-
-
-
