@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path"
 	"regexp"
 )
 
@@ -33,11 +31,11 @@ func findFileName(content string) string {
 	return matches[1]
 }
 
-func Download(url, outputDir string) (string, error) {
+func Download(url string, w io.Writer) error {
 	// Open up connection to url
 	resp, err := http.Get(url)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -50,33 +48,25 @@ func Download(url, outputDir string) (string, error) {
 		// If contentDisposition is empty, update url by calling extrctDownloadLink
 		downloadURL, err = findMatch(resp.Body, matchDownloadURL)
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
 
 	if downloadURL == "" {
-		return "", fmt.Errorf("%s appears to be password protected", url)
+		return fmt.Errorf("%s appears to be password protected", url)
 	}
 
 	resp, err = http.Get(downloadURL)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer resp.Body.Close()
 
 	fileName := findFileName(resp.Header.Get("Content-Disposition"))
 	if fileName == "" {
-		return "", fmt.Errorf("could not find filename: %s", err.Error())
+		return fmt.Errorf("could not find filename: %s", err.Error())
 	}
 
-	file, err := os.Create(path.Join(outputDir, fileName))
-	if err != nil {
-		return "", err
-	}
-
-	_, err = io.Copy(file, resp.Body)
-	if err != nil {
-		return "", err
-	}
-	return fileName, nil
+	_, err = io.Copy(w, resp.Body)
+	return err
 }

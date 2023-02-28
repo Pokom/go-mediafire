@@ -2,14 +2,34 @@ package main
 
 import (
 	"fmt"
-	go_mediafire "github.com/pokom/go-mediafire"
 	"os"
+	"strings"
+
+	go_mediafire "github.com/pokom/go-mediafire"
 )
 
-func run(urls []string, outputDir string)  error {
+func createFile(fileName string, outputDir string) (*os.File, error) {
+	file, err := os.Create(fmt.Sprintf("%s/%s.rar", outputDir, fileName))
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
+func getFileName(url string) string {
+	split := strings.Split(url, "/")
+	return split[len(split)-1]
+}
+
+func run(urls []string, outputDir string) error {
 	for _, url := range urls {
+		fileName := getFileName(url)
+		file, err := createFile(fileName, outputDir)
+		if err != nil {
+			return fmt.Errorf("could not create file: %s", err.Error())
+		}
 		// TODO: Open up a file to write out to
-		err := go_mediafire.Download(url, outputDir)
+		err = go_mediafire.Download(url, file)
 		if err != nil {
 			return fmt.Errorf("could not process url(%s): %s", url, err.Error())
 		}
