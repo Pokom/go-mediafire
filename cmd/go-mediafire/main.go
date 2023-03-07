@@ -29,7 +29,7 @@ func run(urls []string, outputDir string) error {
 			return fmt.Errorf("could not create file: %s", err.Error())
 		}
 		// TODO: Open up a file to write out to
-		err = go_mediafire.Download(url, file)
+		_, err = go_mediafire.Download(url, file)
 		if err != nil {
 			return fmt.Errorf("could not process url(%s): %s", url, err.Error())
 		}

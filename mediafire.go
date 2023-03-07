@@ -31,11 +31,11 @@ func findFileName(content string) string {
 	return matches[1]
 }
 
-func Download(url string, w io.Writer) error {
+func Download(url string, w io.Writer) (string, error) {
 	// Open up connection to url
 	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -48,25 +48,25 @@ func Download(url string, w io.Writer) error {
 		// If contentDisposition is empty, update url by calling extrctDownloadLink
 		downloadURL, err = findMatch(resp.Body, matchDownloadURL)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
 	if downloadURL == "" {
-		return fmt.Errorf("%s appears to be password protected", url)
+		return "", fmt.Errorf("%s appears to be password protected", url)
 	}
 
 	resp, err = http.Get(downloadURL)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	fileName := findFileName(resp.Header.Get("Content-Disposition"))
 	if fileName == "" {
-		return fmt.Errorf("could not find filename: %s", err.Error())
+		return "", fmt.Errorf("could not find filename: %s", err.Error())
 	}
 
 	_, err = io.Copy(w, resp.Body)
-	return err
+	return fileName, err
 }
